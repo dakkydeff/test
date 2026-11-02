@@ -170,3 +170,15 @@ build pdf → save
 - macOS固有コードはコンパイルできない環境で書くため、**APIシグネチャは正確に**（ScreenCaptureKit / CGEvent / CGContext PDF）。曖昧な箇所はコメントで `// NOTE(verify-on-mac):` を付ける。
 - README には権限設定手順、`make app` 手順、「Kindle側で最初のページを開いてから開始」の注意、個人利用限定の注意を書く。
 - Linux で `swift build` / `swift test` が通る構成を意識する（このコンテナには swift が無いので実行はできないが、構成上通るように）。
+
+## 6. 実装時の差分（レビューで承認済み）
+
+- 進捗ビューは `UI/CaptureProgressView.swift` / 型名 `CaptureProgressView`（SwiftUI.ProgressView との衝突回避）。
+- `UnsupportedPlatformMain.swift`（`#if !os(macOS)`）を追加。Linux で `swift build` した際に実行ターゲットのエントリポイントが無くてリンクに失敗するのを防ぐ。
+- 終端判定は **1ページ目から** `observe` する（擬似コードの `page > 1` ガードは廃止）。同一フレームの連続長 = ディスク上の同一PNG枚数となり、`trailingFramesToDrop = n-1` と整合する。
+- 停止時は「PDF を保存 / 破棄」を選べる（`CaptureRunner.partialSavePrompt` + alert）。
+- 撮影中に KindleToPDF が前面になったら一時停止し、Kindle がクリックされたら再開する（毎回 Kindle を強制的に前面にすると停止ボタンが押せなくなるため）。
+- トリミング後の `CGImage` は新しいビットマップに描き直す（`cropping(to:)` は親のピクセルデータを共有し得るため、ハッシュに切り落とした領域が混入するのを防ぐ）。
+- 保存先未指定時はデスクトップに、既存ファイルを上書きしない名前で保存。タイトル既定値はウィンドウタイトル。
+- ad-hoc 署名では再ビルドごとに署名が変わり TCC 権限が外れ得る。README に `tccutil reset` と `CODESIGN_IDENTITY` の案内を記載。
+- PDF 書き出し中は「停止」を無効化（`CaptureRunner.isBuildingPDF`）。
