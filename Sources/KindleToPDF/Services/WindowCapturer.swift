@@ -44,6 +44,10 @@ enum WindowCaptureError: LocalizedError {
 final class WindowCapturer {
     static let kindleBundleIdentifiers: Set<String> = ["com.amazon.Kindle", "com.amazon.Lassen"]
 
+    /// The SCWindow objects last seen for each window ID. If a fresh query momentarily
+    /// omits a window (e.g. during a Space switch), capture falls back to this.
+    private var knownWindows: [CGWindowID: SCWindow] = [:]
+
     /// Normal-level windows of other apps, Kindle windows first. Kindle windows are
     /// listed even when they are on another Space; other apps only when on screen.
     func availableWindows() async throws -> [CapturableWindow] {
@@ -58,6 +62,7 @@ final class WindowCapturer {
                   window.frame.height >= 100,
                   window.isOnScreen || Self.kindleBundleIdentifiers.contains(app.bundleIdentifier)
             else { return nil }
+            knownWindows[window.windowID] = window
             return CapturableWindow(
                 id: window.windowID,
                 title: window.title ?? "",
@@ -84,7 +89,10 @@ final class WindowCapturer {
         // NOTE(verify-on-mac): onScreenWindowsOnly: false is what makes windows on other
         // Spaces show up; confirm SCScreenshotManager returns their current content.
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-        guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
+        if let fresh = content.windows.first(where: { $0.windowID == windowID }) {
+            knownWindows[windowID] = fresh
+        }
+        guard let window = knownWindows[windowID] else {
             throw WindowCaptureError.windowNotFound
         }
 

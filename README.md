@@ -22,6 +22,7 @@ make app      # build/KindleToPDF.app を作成（release ビルド + ad-hoc 署
 make run      # build/KindleToPDF.app を起動（未ビルドならビルドしてから）
 make test     # ロジック部分（CaptureCore）のユニットテスト
 make uninstall # /Applications から削除
+make where    # macOS が認識している KindleToPDF.app の場所を一覧（重複確認用）
 make clean    # .build と build を削除
 ```
 
@@ -44,6 +45,12 @@ make install INSTALL_DIR=~/Applications
 権限（画面収録・アクセシビリティ）は **インストール後に起動した KindleToPDF で許可** してください。`build/` 内のアプリで先に許可しても、同じビルドをコピーしているので通常はそのまま有効ですが、効かない場合は下記「権限が保持される条件について」の手順でリセットしてください。
 
 アップデートするときは `git pull` のあと `make install` をもう一度実行します（再ビルドで署名が変わるため、権限の付け直しが必要になることがあります）。
+
+### Launchpad に KindleToPDF が 2 つ出る / アイコンが白紙のとき
+
+`make run` や Finder で `build/KindleToPDF.app` を一度でも開くと、macOS がその場所も「アプリ」として登録するため、`/Applications` の分と合わせて 2 つ表示されます。`make install` は `build/` 側の登録を解除して削除し、Dock を再起動してアイコンを更新するので、最新版で `make install` し直せば 1 つになります。
+
+それでも複数出る場合は `make where` で場所を確認し、`/Applications/KindleToPDF.app` 以外（`~/Applications` の古いコピーなど）を削除してください。アイコンが白紙のままなら、`killall Dock` を実行するか Mac を再起動すると更新されます。
 
 `make app` は `scripts/build-app.sh` を実行します。内部では次の処理を行います。
 
@@ -108,7 +115,7 @@ make install INSTALL_DIR=~/Applications
 | 途中で止まってしまう（本の途中で終了と判断される） | ページ送りが間に合っていない可能性があります。「ページ送り間隔」を長くするか、「終了判定」の回数を増やしてください。 |
 | ページめくりの途中の画面が写る | 「ページ送り間隔」を長くしてください。 |
 | 「Kindle を前面にできませんでした」と表示される | 前面モードのときのメッセージです。Kindle のウィンドウを一度クリックしてください。撮影が再開されます。 |
-| 「対象のウィンドウが見つかりません」で止まる | Kindle が最小化（Dock にしまわれている）か終了しています。ウィンドウを戻してから、もう一度「更新」→「開始」してください。 |
+| 「対象のウィンドウが見つかりません」で止まる | Kindle が最小化（Dock にしまわれている）か終了しています。ウィンドウを戻してから、もう一度「更新」→「開始」してください。一時的に見つからないだけなら自動で 15 秒ほど再試行します。 |
 | エラーで止まった | ログに表示される一時フォルダに、それまでに撮影した PNG が残っています。 |
 
 ## 既知の制限

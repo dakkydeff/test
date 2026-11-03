@@ -137,7 +137,7 @@ final class CaptureRunner: ObservableObject {
             for page in 1...config.maxPages {
                 try Task.checkCancellation()
 
-                let image = try await capturer.capture(windowID: job.window.id, cropInsets: config.cropInsets)
+                let image = try await captureWithRetry(job: job, config: config)
                 let url = workDirectory.appendingPathComponent(String(format: "page-%05d.png", page))
                 let digest = try await Self.persist(image, to: url)
                 captured.append(url)
@@ -168,6 +168,32 @@ final class CaptureRunner: ObservableObject {
             return (captured, .maxPagesReached)
         } catch is CancellationError {
             return (captured, .userStopped)
+        }
+    }
+
+    /// How long to keep retrying when the window is temporarily unavailable
+    /// (Space switch, Mission Control, app switcher animation...).
+    private static let captureRetryAttempts = 15
+    private static let captureRetryDelay: Duration = .seconds(1)
+
+    /// Captures the window, retrying for a while if it cannot be found or the
+    /// screenshot fails, so a brief hiccup does not abort a long run.
+    private func captureWithRetry(job: CaptureJob, config: CaptureConfig) async throws -> CGImage {
+        var attempt = 0
+        while true {
+            try Task.checkCancellation()
+            do {
+                return try await capturer.capture(windowID: job.window.id, cropInsets: config.cropInsets)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                attempt += 1
+                if attempt == 1 {
+                    appendLog("撮影に失敗したため再試行します（最大 \(Self.captureRetryAttempts) 回）: \(error.localizedDescription)")
+                }
+                guard attempt < Self.captureRetryAttempts else { throw error }
+                try await Task.sleep(for: Self.captureRetryDelay)
+            }
         }
     }
 
