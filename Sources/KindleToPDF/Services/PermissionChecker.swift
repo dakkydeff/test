@@ -9,13 +9,25 @@ final class PermissionChecker: ObservableObject {
     @Published private(set) var screenRecordingGranted = false
     @Published private(set) var accessibilityGranted = false
 
+    /// CGPreflightScreenCaptureAccess() reports the value from process launch and
+    /// keeps returning false after the user grants access until the app restarts.
+    /// A successful window listing proves the capability is actually available,
+    /// so once that happens the flag stays true for this process.
+    private var screenRecordingProven = false
+
     init() {
         refresh()
     }
 
     func refresh() {
-        screenRecordingGranted = Self.hasScreenRecordingAccess()
+        screenRecordingGranted = screenRecordingProven || Self.hasScreenRecordingAccess()
         accessibilityGranted = Self.hasAccessibilityAccess()
+    }
+
+    /// Call after ScreenCaptureKit returned window content successfully.
+    func markScreenRecordingProven() {
+        screenRecordingProven = true
+        if !screenRecordingGranted { screenRecordingGranted = true }
     }
 
     // MARK: Screen Recording

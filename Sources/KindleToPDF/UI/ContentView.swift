@@ -25,11 +25,19 @@ struct ContentView: View {
         windows.first { $0.id == selectedWindowID }
     }
 
-    private var canStart: Bool {
-        !runner.isRunning
-            && selectedWindow != nil
-            && permissions.screenRecordingGranted
-            && permissions.accessibilityGranted
+    private var canStart: Bool { startBlockReason == nil }
+
+    /// Why 開始 is disabled, or nil when it can be pressed.
+    private var startBlockReason: String? {
+        if runner.isRunning { return "撮影中です。" }
+        if !permissions.screenRecordingGranted {
+            return "画面収録が未許可です。許可した後は KindleToPDF を終了して起動し直してください。"
+        }
+        if !permissions.accessibilityGranted {
+            return "アクセシビリティが未許可です。システム設定で KindleToPDF をオンにしてください（「再確認」で反映）。"
+        }
+        if selectedWindow == nil { return "キャプチャするウィンドウを選んでください。" }
+        return nil
     }
 
     var body: some View {
@@ -161,6 +169,11 @@ struct ContentView: View {
                     }
                 }
             }
+            if let reason = startBlockReason, !runner.isRunning {
+                Text("開始できません: \(reason)")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
             Text(config.bringsKindleToFront
                  ? "開始する前に、Kindle で本の最初のページを表示しておいてください。撮影中に KindleToPDF のウィンドウをクリックすると一時停止します。"
                  : "開始する前に、Kindle で本の最初のページを表示しておいてください。開始後は他のアプリに切り替えて構いません。")
@@ -203,6 +216,11 @@ struct ContentView: View {
         do {
             windows = try await capturer.availableWindows()
             windowListError = nil
+            // Listing windows needs Screen Recording; if it worked, the permission is real
+            // even when CGPreflightScreenCaptureAccess() still says otherwise.
+            if !windows.isEmpty {
+                permissions.markScreenRecordingProven()
+            }
             if selectedWindow == nil {
                 selectedWindowID = windows.first(where: \.isKindle)?.id
             }
