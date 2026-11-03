@@ -4,8 +4,11 @@ BUNDLE_ID := jp.local.KindleToPDF
 INSTALL_DIR ?= /Applications
 INSTALLED := $(INSTALL_DIR)/KindleToPDF.app
 LSREGISTER := /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+# Signing identity passed to scripts/build-app.sh. "-" (ad-hoc) changes with every
+# rebuild, which silently invalidates the Screen Recording / Accessibility grants.
+export CODESIGN_IDENTITY ?= -
 
-.PHONY: app test run install uninstall where clean
+.PHONY: app test run install uninstall where reset-permissions clean
 
 app:
 	./scripts/build-app.sh
@@ -36,10 +39,24 @@ install:
 	-$(LSREGISTER) -f "$(INSTALLED)" >/dev/null 2>&1
 	-touch "$(INSTALLED)"
 	-killall Dock >/dev/null 2>&1
+ifeq ($(CODESIGN_IDENTITY),-)
+	@echo "==> ad-hoc 署名は再ビルドごとに変わるため、古い権限を外します（起動後に許可し直してください）"
+	@$(MAKE) --no-print-directory reset-permissions
+endif
+	@echo ""
 	@echo "Installed: $(INSTALLED)"
 	@echo "Launchpad / Spotlight / Finder の「アプリケーション」から起動できます。"
-	@echo "初回起動後、システム設定で画面収録とアクセシビリティを許可してください。"
+	@echo "起動したら、システム設定で「画面収録」と「アクセシビリティ」を KindleToPDF に許可してください。"
+	@echo "（画面収録は許可後に KindleToPDF を一度終了して起動し直すと反映されます）"
 	@$(MAKE) --no-print-directory where
+
+# Forgets this app's Screen Recording / Accessibility grants so macOS asks again.
+# Needed after every rebuild with ad-hoc signing: System Settings keeps showing
+# the switch as ON, but the grant no longer matches the new signature.
+reset-permissions:
+	-tccutil reset ScreenCapture $(BUNDLE_ID) >/dev/null 2>&1 || true
+	-tccutil reset Accessibility $(BUNDLE_ID) >/dev/null 2>&1 || true
+	@echo "画面収録とアクセシビリティの許可をリセットしました。KindleToPDF を起動し直して許可してください。"
 
 uninstall:
 	rm -rf "$(INSTALLED)"

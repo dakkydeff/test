@@ -49,6 +49,11 @@ else
 fi
 
 echo "==> codesign (identity: ${IDENTITY})"
+if [[ "${IDENTITY}" != "-" ]] && ! security find-identity -v -p codesigning | grep -q "${IDENTITY}"; then
+    echo "error: code-signing identity \"${IDENTITY}\" not found in the keychain." >&2
+    echo "       security find-identity -v -p codesigning で名前を確認してください。" >&2
+    exit 1
+fi
 codesign --force --deep --sign "${IDENTITY}" "${APP_DIR}"
 codesign --verify --verbose=1 "${APP_DIR}"
 
