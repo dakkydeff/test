@@ -18,9 +18,9 @@ let package = Package(
         .executableTarget(
             name: "KindleToPDF",
             dependencies: ["CaptureCore"],
-            // Info.plist is copied into the .app bundle by scripts/build-app.sh
-            // (SwiftPM does not allow Info.plist as a resource).
-            exclude: ["Resources/Info.plist"],
+            // Info.plist and the icon are copied into the .app bundle by
+            // scripts/build-app.sh (SwiftPM does not allow Info.plist as a resource).
+            exclude: ["Resources"],
             linkerSettings: [
                 .linkedFramework("ScreenCaptureKit", .when(platforms: [.macOS])),
             ]

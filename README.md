@@ -17,19 +17,41 @@ Kindle for Mac で開いている本を **1ページずつ画面キャプチャ�
 ## ビルド
 
 ```sh
+make install  # ビルドして /Applications/KindleToPDF.app にインストール（おすすめ）
 make app      # build/KindleToPDF.app を作成（release ビルド + ad-hoc 署名）
 make run      # build/KindleToPDF.app を起動（未ビルドならビルドしてから）
 make test     # ロジック部分（CaptureCore）のユニットテスト
+make uninstall # /Applications から削除
 make clean    # .build と build を削除
 ```
+
+### アプリケーションフォルダに入れて、いつでも起動できるようにする
+
+```sh
+git clone -b claude/kindle-to-pdf-mac-app-ilmvyx https://github.com/dakkydeff/test.git KindleToPDF
+cd KindleToPDF
+make install
+```
+
+これで `/Applications/KindleToPDF.app` が作られ、**Launchpad・Spotlight（⌘Space で「KindleToPDF」）・Finder の「アプリケーション」** から他のアプリと同じように起動できます。Dock に残したい場合は、起動中の Dock アイコンを右クリック → オプション → 「Dock に追加」を選んでください。
+
+`/Applications` に書き込めない場合は、ホーム直下の Applications フォルダに入れられます。
+
+```sh
+make install INSTALL_DIR=~/Applications
+```
+
+権限（画面収録・アクセシビリティ）は **インストール後に起動した KindleToPDF で許可** してください。`build/` 内のアプリで先に許可しても、同じビルドをコピーしているので通常はそのまま有効ですが、効かない場合は下記「権限が保持される条件について」の手順でリセットしてください。
+
+アップデートするときは `git pull` のあと `make install` をもう一度実行します（再ビルドで署名が変わるため、権限の付け直しが必要になることがあります）。
 
 `make app` は `scripts/build-app.sh` を実行します。内部では次の処理を行います。
 
 1. `swift build -c release --product KindleToPDF`
-2. `build/KindleToPDF.app` を組み立て（実行ファイル・`Info.plist`・`PkgInfo`）
+2. `build/KindleToPDF.app` を組み立て（実行ファイル・`Info.plist`・`PkgInfo`・`AppIcon.icns`）
 3. `codesign --force --deep --sign - build/KindleToPDF.app`（ad-hoc 署名）
 
-できあがった `build/KindleToPDF.app` は `/Applications` などにコピーして使えます。
+できあがった `build/KindleToPDF.app` は `make install` で `/Applications` にコピーできます（手動で Finder からドラッグしても構いません）。
 
 ## 権限の設定
 

@@ -10,6 +10,8 @@
 	<string>KindleToPDF</string>
 	<key>CFBundleDisplayName</key>
 	<string>KindleToPDF</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleExecutable</key>
 	<string>KindleToPDF</string>
 	<key>CFBundlePackageType</key>
