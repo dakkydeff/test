@@ -8,7 +8,12 @@ final class CaptureConfigTests: XCTestCase {
         XCTAssertEqual(config.maxPages, 2000)
         XCTAssertEqual(config.stableFramesToStop, 3)
         XCTAssertEqual(config.cropInsets, .zero)
+        XCTAssertFalse(config.bringsKindleToFront, "background mode is the default")
         XCTAssertEqual(config.clamped(), config)
+    }
+
+    func testClampingKeepsForegroundFlag() {
+        XCTAssertTrue(CaptureConfig(bringsKindleToFront: true).clamped().bringsKindleToFront)
     }
 
     func testPageIntervalIsClamped() {

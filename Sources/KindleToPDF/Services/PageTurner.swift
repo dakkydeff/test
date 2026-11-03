@@ -21,15 +21,23 @@ enum PageTurnError: LocalizedError {
 }
 
 /// Turns pages by sending the right-arrow key directly to the Kindle process.
+///
+/// The key events are posted to the process (`postToPid`), not to the system
+/// event queue, so they reach Kindle even while another app is in front and never
+/// land in whatever the user is typing into. With `bringsTargetToFront == false`
+/// (background mode) Kindle is therefore left alone; with `true` it is activated
+/// before each page turn, for Kindle builds that ignore keys while inactive.
 @MainActor
 final class PageTurner {
     /// kVK_RightArrow
     static let rightArrowKeyCode: CGKeyCode = 0x7C
 
     let targetPID: pid_t
+    let bringsTargetToFront: Bool
 
-    init(targetPID: pid_t) {
+    init(targetPID: pid_t, bringsTargetToFront: Bool) {
         self.targetPID = targetPID
+        self.bringsTargetToFront = bringsTargetToFront
     }
 
     /// Fails early (and shows the system prompt) when Accessibility is not granted.
@@ -56,7 +64,7 @@ final class PageTurner {
             throw PageTurnError.accessibilityNotGranted
         }
         guard let app = runningTarget() else { throw PageTurnError.targetNotRunning }
-        if !app.isActive {
+        if bringsTargetToFront, !app.isActive {
             try activateTarget()
             try await Task.sleep(for: .milliseconds(300))
         }

@@ -79,17 +79,25 @@ public struct CaptureConfig: Equatable, Sendable {
     public var stableFramesToStop: Int = CaptureConfig.defaultStableFramesToStop
     /// Pixels trimmed from each frame (top/left/bottom/right).
     public var cropInsets: CropInsets = .zero
+    /// `false` (background mode, the default): Kindle is never activated; page-turn
+    /// keys are posted straight to its process and the window is captured even when
+    /// it is hidden behind other windows or on another Space, so the Mac stays usable.
+    /// `true` (foreground mode): Kindle is brought to the front before each page turn,
+    /// for builds of Kindle that ignore key events while inactive.
+    public var bringsKindleToFront: Bool = false
 
     public init(
         pageInterval: TimeInterval = CaptureConfig.defaultPageInterval,
         maxPages: Int = CaptureConfig.defaultMaxPages,
         stableFramesToStop: Int = CaptureConfig.defaultStableFramesToStop,
-        cropInsets: CropInsets = .zero
+        cropInsets: CropInsets = .zero,
+        bringsKindleToFront: Bool = false
     ) {
         self.pageInterval = pageInterval
         self.maxPages = maxPages
         self.stableFramesToStop = stableFramesToStop
         self.cropInsets = cropInsets
+        self.bringsKindleToFront = bringsKindleToFront
     }
 
     /// Returns a copy with every value forced into its valid range.
@@ -100,7 +108,8 @@ public struct CaptureConfig: Equatable, Sendable {
             pageInterval: interval.clamped(to: Self.pageIntervalRange),
             maxPages: maxPages.clamped(to: Self.maxPagesRange),
             stableFramesToStop: stableFramesToStop.clamped(to: Self.stableFramesRange),
-            cropInsets: cropInsets.clamped()
+            cropInsets: cropInsets.clamped(),
+            bringsKindleToFront: bringsKindleToFront
         )
     }
 }

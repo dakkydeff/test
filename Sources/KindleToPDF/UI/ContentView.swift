@@ -96,6 +96,18 @@ struct ContentView: View {
                     }
                 }
                 GridRow {
+                    Text("動作モード")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Kindle を前面に出して撮影する（前面モード）", isOn: $config.bringsKindleToFront)
+                            .toggleStyle(.checkbox)
+                        Text(config.bringsKindleToFront
+                             ? "ページ送りのたびに Kindle を前面にします。撮影中は Mac で他の作業ができません。"
+                             : "バックグラウンドモード: Kindle が他のウィンドウの後ろや別の画面（Space）にあっても撮影を続けます。最小化だけはしないでください。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                GridRow {
                     Text("トリミング (px)")
                     HStack(spacing: 10) {
                         insetField("上", \.top)
@@ -149,7 +161,9 @@ struct ContentView: View {
                     }
                 }
             }
-            Text("開始する前に、Kindle で本の最初のページを表示しておいてください。撮影中に KindleToPDF のウィンドウをクリックすると一時停止します。")
+            Text(config.bringsKindleToFront
+                 ? "開始する前に、Kindle で本の最初のページを表示しておいてください。撮影中に KindleToPDF のウィンドウをクリックすると一時停止します。"
+                 : "開始する前に、Kindle で本の最初のページを表示しておいてください。開始後は他のアプリに切り替えて構いません。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

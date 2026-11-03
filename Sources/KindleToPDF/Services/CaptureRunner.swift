@@ -118,16 +118,20 @@ final class CaptureRunner: ObservableObject {
         guard PermissionChecker.hasScreenRecordingAccess() else {
             throw CaptureRunnerError.screenRecordingNotGranted
         }
-        let turner = PageTurner(targetPID: job.window.processID)
+        let turner = PageTurner(targetPID: job.window.processID, bringsTargetToFront: config.bringsKindleToFront)
         try turner.ensureAccessibility()
 
         var captured: [URL] = []
         do {
-            let activated = try turner.activateTarget()
-            if !activated {
-                appendLog("Kindle を前面にできませんでした。Kindle のウィンドウをクリックしてください。")
+            if config.bringsKindleToFront {
+                let activated = try turner.activateTarget()
+                if !activated {
+                    appendLog("Kindle を前面にできませんでした。Kindle のウィンドウをクリックしてください。")
+                }
+                try await Task.sleep(for: .milliseconds(500))
+            } else {
+                appendLog("バックグラウンドモード: Kindle を前面に出さずに撮影します。他の作業をしていて構いません（Kindle を最小化しないでください）。")
             }
-            try await Task.sleep(for: .milliseconds(500))
 
             var detector = EndOfBookDetector(stableFramesToStop: config.stableFramesToStop)
             for page in 1...config.maxPages {
@@ -154,7 +158,9 @@ final class CaptureRunner: ObservableObject {
 
                 if page == config.maxPages { break }
 
-                try await waitWhileOwnAppIsFrontmost()
+                if config.bringsKindleToFront {
+                    try await waitWhileOwnAppIsFrontmost()
+                }
                 try await turner.turnPage()
                 try await Task.sleep(for: .seconds(config.pageInterval))
             }
@@ -227,8 +233,8 @@ final class CaptureRunner: ObservableObject {
         }
     }
 
-    /// Re-activating Kindle while the user is working in this window would make
-    /// the Stop button unreachable, so pause until the user leaves our window.
+    /// Foreground mode only: re-activating Kindle while the user is working in this
+    /// window would make the Stop button unreachable, so pause until the user leaves.
     private func waitWhileOwnAppIsFrontmost() async throws {
         guard NSApp.isActive else { return }
         appendLog("KindleToPDF が前面にあるため一時停止中です。Kindle のウィンドウをクリックすると再開します。")

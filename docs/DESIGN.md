@@ -182,3 +182,11 @@ build pdf → save
 - 保存先未指定時はデスクトップに、既存ファイルを上書きしない名前で保存。タイトル既定値はウィンドウタイトル。
 - ad-hoc 署名では再ビルドごとに署名が変わり TCC 権限が外れ得る。README に `tccutil reset` と `CODESIGN_IDENTITY` の案内を記載。
 - PDF 書き出し中は「停止」を無効化（`CaptureRunner.isBuildingPDF`）。
+
+## 7. バックグラウンドモード（v1.1）
+
+ユーザーが他の画面に移ると撮影が止まる問題への対応。`CaptureConfig.bringsKindleToFront`（既定 `false`）を追加。
+
+- **バックグラウンドモード (`false`, 既定)**: Kindle を activate しない。`SCShareableContent` は `onScreenWindowsOnly: false` で取得し、別 Space や他ウィンドウの背面にある Kindle ウィンドウも `desktopIndependentWindow` で撮る。ページ送りは `CGEvent.postToPid` のみ（プロセス宛てなので他アプリの入力には混ざらない）。KindleToPDF が前面でも一時停止しない。最小化されたウィンドウは撮れない。
+- **前面モード (`true`)**: 従来どおり。ページ送り前に Kindle を activate し、KindleToPDF が前面なら一時停止。背面の Kindle がキーに反応しないビルド向けのフォールバック。
+- ウィンドウ一覧は Kindle のウィンドウなら画面外（別 Space）でも表示し、他アプリは `isOnScreen` のものだけ表示。

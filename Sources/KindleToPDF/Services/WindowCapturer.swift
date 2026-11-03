@@ -30,7 +30,7 @@ enum WindowCaptureError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .windowNotFound:
-            return "対象のウィンドウが見つかりません。Kindle が終了・最小化されていないか確認してください。"
+            return "対象のウィンドウが見つかりません。Kindle が終了・最小化（Dock にしまう）されていないか確認してください。"
         case .cropLeavesNothing:
             return "トリミング量が画像サイズ以上です。トリミングの値を小さくしてください。"
         case .cropFailed:
@@ -44,9 +44,10 @@ enum WindowCaptureError: LocalizedError {
 final class WindowCapturer {
     static let kindleBundleIdentifiers: Set<String> = ["com.amazon.Kindle", "com.amazon.Lassen"]
 
-    /// On-screen, normal-level windows of other apps, Kindle windows first.
+    /// Normal-level windows of other apps, Kindle windows first. Kindle windows are
+    /// listed even when they are on another Space; other apps only when on screen.
     func availableWindows() async throws -> [CapturableWindow] {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
         let ownPID = ProcessInfo.processInfo.processIdentifier
 
         let windows = content.windows.compactMap { window -> CapturableWindow? in
@@ -54,7 +55,8 @@ final class WindowCapturer {
                   app.processID != ownPID,
                   window.windowLayer == 0,
                   window.frame.width >= 100,
-                  window.frame.height >= 100
+                  window.frame.height >= 100,
+                  window.isOnScreen || Self.kindleBundleIdentifiers.contains(app.bundleIdentifier)
             else { return nil }
             return CapturableWindow(
                 id: window.windowID,
@@ -73,9 +75,15 @@ final class WindowCapturer {
     }
 
     /// Captures one frame of the window at full backing resolution, then applies `cropInsets`.
+    ///
+    /// The window does not have to be visible: `desktopIndependentWindow` captures from the
+    /// window's own backing store, so it may be covered by other windows or sit on another
+    /// Space. A minimized window cannot be captured.
     func capture(windowID: CGWindowID, cropInsets: CropInsets) async throws -> CGImage {
         // Re-query every time so the window's current size and display are used.
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        // NOTE(verify-on-mac): onScreenWindowsOnly: false is what makes windows on other
+        // Spaces show up; confirm SCScreenshotManager returns their current content.
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
         guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
             throw WindowCaptureError.windowNotFound
         }
