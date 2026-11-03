@@ -190,3 +190,5 @@ build pdf → save
 - **バックグラウンドモード (`false`, 既定)**: Kindle を activate しない。`SCShareableContent` は `onScreenWindowsOnly: false` で取得し、別 Space や他ウィンドウの背面にある Kindle ウィンドウも `desktopIndependentWindow` で撮る。ページ送りは `CGEvent.postToPid` のみ（プロセス宛てなので他アプリの入力には混ざらない）。KindleToPDF が前面でも一時停止しない。最小化されたウィンドウは撮れない。
 - **前面モード (`true`)**: 従来どおり。ページ送り前に Kindle を activate し、KindleToPDF が前面なら一時停止。背面の Kindle がキーに反応しないビルド向けのフォールバック。
 - ウィンドウ一覧は Kindle のウィンドウなら画面外（別 Space）でも表示し、他アプリは `isOnScreen` のものだけ表示。
+- **キャプチャのフォールバック**: `SCScreenshotManager` は別 Space のウィンドウで「ストリームを開始できませんでした」(SCStreamError) になる。失敗したら `CGWindowListCreateImage(.null, .optionIncludingWindow, id, [.boundsIgnoreFraming, .bestResolution])` に切り替え、その実行中はずっとそちらを使う（フレームのピクセル形式を揃えて終端判定を安定させるため）。この API は macOS 14 で deprecated だが動作する。
+- 一時的な失敗は `CaptureRunner.captureWithRetry` が 1 秒間隔で最大 15 回再試行。

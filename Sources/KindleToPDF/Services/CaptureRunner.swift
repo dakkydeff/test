@@ -122,6 +122,10 @@ final class CaptureRunner: ObservableObject {
         try turner.ensureAccessibility()
 
         var captured: [URL] = []
+        capturer.beginRun()
+        capturer.onBackendChange = { [weak self] backend in
+            self?.appendLog("ScreenCaptureKit で撮影できないため、\(backend.rawValue) に切り替えました（別の画面にあるウィンドウでも撮影できます）。")
+        }
         do {
             if config.bringsKindleToFront {
                 let activated = try turner.activateTarget()
